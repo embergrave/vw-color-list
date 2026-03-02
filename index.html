@@ -353,6 +353,7 @@
 			line-height: 1.2;
 			word-break: break-word;
 			overflow-wrap: anywhere;
+			padding: 0 2px;
 		}
 
 		body.spawn-mode .swatch {
@@ -374,9 +375,12 @@
 		.name {
 			font-size: var(--base-label-size);
 			font-weight: 700;
-			white-space: nowrap;
 			width: 100%;
 			overflow: hidden;
+			display: -webkit-box;
+			-webkit-line-clamp: 3;
+			-webkit-box-orient: vertical;
+			line-height: 1.1;
 		}
 
 		.hex {
@@ -645,12 +649,6 @@
 			return luminance > 0.5 ? "#000000" : "#ffffff";
 		}
 
-		function getNameScale(label) {
-			const baselineChars = 12;
-			const scale = baselineChars / Math.max(label.length, baselineChars);
-			return Math.max(0.45, Math.min(1, scale));
-		}
-
 		const grid = document.getElementById("grid");
 		const spawnMapModeToggle = document.getElementById("spawnMapModeToggle");
 		const categoryFilter = document.getElementById("categoryFilter");
@@ -764,6 +762,33 @@
 			updateInfo(getVisibleEntries().length);
 		});
 
+		function truncateFrontToLines(element, text, maxLines) {
+			element.textContent = text;
+			const style = window.getComputedStyle(element);
+			const lineHeight = parseFloat(style.lineHeight);
+			if (!lineHeight || Number.isNaN(lineHeight)) {
+				return;
+			}
+			const maxHeight = lineHeight * maxLines + 0.5;
+			if (element.scrollHeight <= maxHeight) {
+				return;
+			}
+			let left = 0;
+			let right = text.length;
+			let best = text.length;
+			while (left <= right) {
+				const mid = Math.floor((left + right) / 2);
+				element.textContent = "…" + text.slice(mid);
+				if (element.scrollHeight <= maxHeight) {
+					best = mid;
+					right = mid - 1;
+				} else {
+					left = mid + 1;
+				}
+			}
+			element.textContent = best > 0 ? "…" + text.slice(best) : text;
+		}
+
 		function renderGrid() {
 			const selectedCategories = new Set(getSelectedValues(categoryFilter));
 			const selectedMods = new Set(getSelectedValues(modFilter));
@@ -791,20 +816,10 @@
 
 				const nameLine = document.createElement("div");
 				nameLine.className = "name";
-				nameLine.style.fontSize = `calc(var(--base-label-size) * ${getNameScale(entry.label)})`;
 				nameLine.textContent = entry.label;
-
-				const hexLine = document.createElement("div");
-				hexLine.className = "hex";
-				hexLine.textContent = rgbValue;
-
-				const categoryLine = document.createElement("div");
-				categoryLine.className = "category";
-				categoryLine.textContent = entry.category.toUpperCase();
+				nameLine.dataset.label = entry.label;
 
 				content.appendChild(nameLine);
-				content.appendChild(hexLine);
-				content.appendChild(categoryLine);
 				swatch.appendChild(content);
 				item.appendChild(swatch);
 				swatch.addEventListener("click", async () => {
@@ -875,6 +890,9 @@
 
 			updateInfo(visibleEntries.length);
 			configCode.textContent = buildConfigText(visibleEntries);
+			document.querySelectorAll(".name").forEach((nameEl) => {
+				truncateFrontToLines(nameEl, nameEl.dataset.label || nameEl.textContent || "", 3);
+			});
 		}
 
 		renderGrid();
