@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>MWL Color Grid</title>
+	<style>
+		:root {
+			--gap: 5px;
+			--bg: #000000;
+			--text: #ffffff;
+			--circle-size: 100px;
+			--base-label-size: calc(var(--circle-size) * 0.11);
+			--panel-height: calc(100vh - 120px);
+		}
+
+		* {
+			box-sizing: border-box;
+			scrollbar-width: thin;
+			scrollbar-color: #3a3a3a #111111;
+		}
+
+		*::-webkit-scrollbar {
+			width: 10px;
+			height: 10px;
+		}
+
+		*::-webkit-scrollbar-track {
+			background: #111111;
+		}
+
+		*::-webkit-scrollbar-thumb {
+			background: #3a3a3a;
+			border-radius: 8px;
+			border: 2px solid #111111;
+		}
+
+		*::-webkit-scrollbar-thumb:hover {
+			background: #4a4a4a;
+		}
+
+		body {
+			margin: 0;
+			padding: 20px;
+			font-family: Consolas, "Courier New", monospace;
+			background: var(--bg);
+			color: var(--text);
+			display: flex;
+			justify-content: center;
+			height: 100vh;
+			overflow: hidden;
+		}
+
+		.page {
+			width: 100%;
+			max-width: 1700px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			padding-top: 20px;
+			max-height: calc(100vh - 40px);
+			overflow-y: auto;
+			padding-bottom: 20px;
+		}
+
+		h1 {
+			margin: 0 0 8px;
+			font-size: 1.3rem;
+			font-weight: 700;
+			color: #ffffff;
+			text-align: center;
+		}
+
+		.meta {
+			margin: 0 0 16px;
+			font-size: 0.9rem;
+			opacity: 0.85;
+			color: #ffffff;
+			text-align: center;
+		}
+
+		.footer {
+			margin-top: 22px;
+			font-size: 0.85rem;
+			opacity: 0.85;
+			text-align: center;
+		}
+
+		.controls {
+			margin: 0 0 10px;
+			color: #ffffff;
+			font-size: 0.9rem;
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+			justify-content: flex-start;
+			gap: 10px;
+			width: 100%;
+		}
+
+		.control-group {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			width: 100%;
+		}
+
+		.control-group label {
+			font-size: 0.9rem;
+			font-weight: 700;
+			color: #ffffff;
+		}
+
+		.filter-select {
+			min-width: 0;
+			width: 100%;
+			height: 110px;
+			background: #0f0f0f;
+			color: #ffffff;
+			border: 1px solid #3a3a3a;
+			font-family: Consolas, "Courier New", monospace;
+			font-size: 0.85rem;
+			padding: 4px;
+		}
+
+		.action-buttons {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.action-buttons button {
+			background: #1a1a1a;
+			color: #ffffff;
+			border: 1px solid #3a3a3a;
+			font-family: Consolas, "Courier New", monospace;
+			font-size: 0.85rem;
+			padding: 6px 10px;
+			cursor: pointer;
+		}
+
+		.info-group {
+			min-width: 0;
+		}
+
+		.info-inline {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 14px;
+			margin: 0;
+			width: 100%;
+			font-size: clamp(0.62rem, 1.2vw, 0.82rem);
+			line-height: 1.35;
+			color: #ffffff;
+			white-space: nowrap;
+			flex-wrap: nowrap;
+		}
+
+		.config-output {
+			width: 320px;
+			min-width: 320px;
+			max-width: 320px;
+			background: #111111;
+			border: 1px solid #2f2f2f;
+			padding: 10px;
+			margin: 0;
+			display: flex;
+			flex-direction: column;
+			height: var(--panel-height);
+		}
+
+		.content-layout {
+			width: fit-content;
+			max-width: 100%;
+			display: flex;
+			justify-content: center;
+			align-items: flex-start;
+            gap: 25px;
+		}
+
+		.right-panel {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			width: 760px;
+			min-width: 760px;
+			max-width: 760px;
+		}
+
+		@media (max-width: 1200px) {
+			.content-layout {
+				flex-direction: column;
+				align-items: center;
+			}
+
+			.config-output,
+			.right-panel {
+				width: min(100%, 980px);
+				min-width: 0;
+				max-width: 980px;
+			}
+		}
+
+		.config-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 8px;
+		}
+
+		.config-title {
+			font-size: 0.9rem;
+			font-weight: 700;
+			color: #ffffff;
+		}
+
+		.config-copy {
+			background: #1a1a1a;
+			color: #ffffff;
+			border: 1px solid #3a3a3a;
+			font-family: Consolas, "Courier New", monospace;
+			font-size: 0.8rem;
+			padding: 5px 10px;
+			cursor: pointer;
+		}
+
+		#configCode {
+			display: block;
+			white-space: pre;
+			overflow: auto;
+			max-height: none;
+			flex: 1;
+			margin: 0;
+			font-family: Consolas, "Courier New", monospace;
+			font-size: 0.85rem;
+			line-height: 1.3;
+			color: #d8ffd8;
+		}
+
+		.circles-scroll {
+			width: 100%;
+			height: var(--panel-height);
+			max-height: var(--panel-height);
+			overflow: auto;
+			display: flex;
+			justify-content: center;
+		}
+
+		#grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(var(--circle-size), 1fr));
+			gap: var(--gap);
+			width: min(100%, calc(var(--circle-size) * 7 + var(--gap) * 6));
+			justify-items: center;
+		}
+
+		body.spawn-mode {
+			--circle-size: 2px;
+		}
+
+		body.spawn-mode #grid {
+			display: block;
+			column-count: 3;
+			column-gap: 50px;
+			width: 100%;
+			padding: 0 12px;
+		}
+
+		@media (max-width: 900px) {
+			body.spawn-mode #grid {
+				column-count: 2;
+			}
+		}
+
+		@media (max-width: 620px) {
+			body.spawn-mode #grid {
+				column-count: 1;
+			}
+		}
+
+		.category-group {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			align-items: center;
+		}
+
+		body.spawn-mode .category-group {
+			break-inside: avoid;
+			display: inline-flex;
+			width: 100%;
+			margin: 0 0 15px;
+		}
+
+		body.spawn-mode .category-title {
+			padding: 5px 0;
+		}
+
+		.category-title {
+			font-size: 0.85rem;
+			font-weight: 700;
+			color: #ffffff;
+			text-transform: uppercase;
+		}
+
+		.category-swatches {
+			display: grid;
+			grid-template-columns: repeat(7, var(--circle-size));
+			gap: var(--gap);
+			justify-content: center;
+		}
+
+		.item {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: flex-start;
+			gap: 0;
+		}
+
+		.swatch {
+			width: var(--circle-size);
+			height: calc(var(--circle-size) * 0.58);
+			border-radius: 6px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			border: none;
+			box-shadow: none;
+			cursor: pointer;
+		}
+
+		.text-block {
+			width: 100%;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			line-height: 1.2;
+			word-break: break-word;
+			overflow-wrap: anywhere;
+		}
+
+		body.spawn-mode .swatch {
+			width: var(--circle-size);
+			height: var(--circle-size);
+			border-radius: 50%;
+			clip-path: none;
+			image-rendering: pixelated;
+		}
+
+		.name,
+		.hex,
+		.category {
+			font-family: Consolas, "Courier New", monospace;
+			color: inherit;
+			line-height: 1.02;
+		}
+
+		.name {
+			font-size: var(--base-label-size);
+			font-weight: 700;
+			white-space: nowrap;
+			width: 100%;
+			overflow: hidden;
+		}
+
+		.hex {
+			font-size: calc(var(--base-label-size) * 1.25);
+			font-weight: 700;
+			padding: 1px 0 3px;
+		}
+
+		.category {
+			font-size: calc(var(--base-label-size) * 0.75);
+			font-weight: 700;
+		}
+
+		body.spawn-mode .text-block {
+			display: none;
+		}
+
+		body.spawn-mode .category-swatches {
+			gap: 25px;
+		}
+	</style>
+</head>
+<body>
+	<div class="page">
+	<div class="content-layout">
+		<div id="configOutput" class="config-output">
+			<div class="controls">
+				<h1>BC Location Color Sheet</h1>
+				<div class="control-group">
+					<select id="categoryFilter" class="filter-select" multiple></select>
+				</div>
+				<div class="control-group">
+					<select id="modFilter" class="filter-select" multiple></select>
+				</div>
+				<div class="control-group action-buttons">
+					<button id="selectAllFilters" type="button">SELECT ALL</button>
+					<button id="clearAllFilters" type="button">CLEAR ALL</button>
+					<button id="spawnMapModeToggle" type="button" aria-pressed="false">SPAWN MAP: OFF</button>
+				</div>
+				<div class="control-group info-group">
+					<div class="info-inline">
+						<span id="infoShowing">Showing 0 / 0</span>
+						<span id="infoMode">Mode: Normal</span>
+					</div>
+				</div>
+			</div>
+			<div class="config-header">
+				<div class="config-title">GENERATED CONFIG</div>
+				<button id="copyConfigButton" class="config-copy" type="button">COPY CONFIG</button>
+			</div>
+			<code id="configCode"></code>
+		</div>
+		<div class="right-panel">
+			<div class="circles-scroll">
+				<div id="grid"></div>
+			</div>
+		</div>
+	</div>
+	<div class="footer">Made by Konjirmos</div>
+	</div>
+
+	<script>
+		const mwlByCategory = {
+			Meadows: {
+				MWL_DeerShrine1: 10, MWL_DeerShrine2: 10, MWL_MaypoleHut1: 10, MWL_MeadowsBarn1: 5, MWL_MeadowsFarm1: 10,
+				MWL_MeadowsHouse2: 20, MWL_MeadowsLighthouse1: 10, MWL_MeadowsRuin1: 5, MWL_MeadowsSawmill1: 10, MWL_MeadowsTavern1: 10,
+				MWL_MeadowsTomb4: 10, MWL_MeadowsTower1: 15, MWL_MeadowsWall1: 10, MWL_OakHut1: 15, MWL_Ruins1: 5,
+				MWL_Ruins2: 10, MWL_Ruins3: 25, MWL_Ruins6: 5, MWL_Ruins7: 2, MWL_Ruins8: 5,
+				MWL_RuinsArena1: 25, MWL_RuinsArena3: 25, MWL_RuinsChurch1: 25, MWL_RuinsWell1: 5, MWL_SmallHouse1: 20
+			},
+			BlackForest: {
+				MWL_CoastTower1: 15, MWL_ForestCamp1: 20, MWL_ForestForge1: 20, MWL_ForestForge2: 20, MWL_ForestGreatHouse2: 20,
+				MWL_ForestGrove1: 15, MWL_ForestHouse2: 20, MWL_ForestPillar1: 15, MWL_ForestRuin1: 20, MWL_ForestRuin2: 15,
+				MWL_ForestRuin3: 15, MWL_ForestSkull1: 15, MWL_ForestTower2: 20, MWL_ForestTower3: 20, MWL_ForestTower4: 15,
+				MWL_ForestTower5: 15, MWL_GuardTower1: 5, MWL_MassGrave1: 15, MWL_RockShrine1: 15, MWL_RootRuins1: 15,
+				MWL_RootsTower1: 20, MWL_RootsTower2: 10, MWL_RuinedRootTower5: 10, MWL_RuinedTower1: 15, MWL_RuinsArena2: 5,
+				MWL_RuinsCastle1: 15, MWL_RuinsCastle3: 5, MWL_RuinsTower3: 15, MWL_RuinsTower6: 15, MWL_RuinsTower8: 10,
+				MWL_StoneFormation1: 15, MWL_StoneOutlook1: 10, MWL_Tavern1: 15, MWL_WoodTower1: 10, MWL_WoodTower2: 10,
+				MWL_WoodTower3: 10
+			},
+			Swamp: {
+				MWL_AbandonedHouse1: 15, MWL_Belmont1: 5, MWL_CastleCorner1: 15, MWL_FortBakkarhalt1: 5, MWL_GuckPit1: 15,
+				MWL_Shipyard1: 20, MWL_StoneCircle1: 10, MWL_SwampAltar1: 15, MWL_SwampAltar2: 10, MWL_SwampAltar3: 10,
+				MWL_SwampAltar4: 10, MWL_SwampBrokenTower1: 15, MWL_SwampBrokenTower3: 10, MWL_SwampCastle2: 10, MWL_SwampCourtyard1: 5,
+				MWL_SwampGrave1: 25, MWL_SwampHouse1: 20, MWL_SwampRuin1: 25, MWL_SwampTemple1: 10, MWL_SwampTower1: 20,
+				MWL_SwampTower2: 25, MWL_SwampTower3: 25, MWL_SwampWell1: 20, MWL_Treehouse1: 20, MWL_TreeTowers1: 20
+			},
+			Mountains: {
+				MWL_MountainCultShrine1: 15, MWL_MountainDvergrShrine1: 15, MWL_MountainDvergrShrine2: 15, MWL_MountainOverlook1: 15, MWL_MountainShrine1: 20,
+				MWL_RuinsChurch2: 15, MWL_StoneAltar1: 15, MWL_StoneCastle1: 5, MWL_StoneFort1: 10, MWL_StoneHall1: 10,
+				MWL_StoneTavern1: 10, MWL_StoneTower1: 10, MWL_StoneTower2: 10, MWL_TempleShrine1: 5, MWL_WoodBarn1: 10,
+				MWL_WoodFarm1: 10, MWL_WoodHouse1: 5
+			},
+			Plains: {
+				MWL_FulingRock1: 15, MWL_FulingTemple1: 15, MWL_FulingTemple2: 10, MWL_FulingTemple3: 20, MWL_FulingTemple4: 10,
+				MWL_FulingTempleBroken1: 10, MWL_FulingTower1: 20, MWL_FulingVillage1: 15, MWL_FulingVillage2: 15, MWL_FulingWall1: 20,
+				MWL_GoblinFort1: 10, MWL_PlainsPillar1: 15, MWL_RockGarden1: 15
+			},
+			Mistlands: {
+				MWL_AncientShrine1: 15, MWL_DvergrEitrSingularity1: 25, MWL_DvergrHouse1: 20, MWL_DvergrHouseWood1: 10, MWL_DvergrHouseWood2: 10,
+				MWL_DvergrKnowledgeExtractor1: 15, MWL_MarbleCage1: 10, MWL_MarbleCliffAltar1: 10, MWL_MarbleHome1: 10, MWL_MarbleHome2: 10,
+				MWL_MarbleJail1: 10, MWL_MistFort2: 20, MWL_MistHut1: 25, MWL_Misthut2: 15, MWL_MistPond1: 10,
+				MWL_MistShrine1: 15, MWL_MistTower1: 20, MWL_MistTower2: 25, MWL_MistWall1: 15, MWL_MistWorkshop1: 25,
+				MWL_SecretRoom1: 15
+			},
+			Ashlands: {
+				MWL_AshlandsFort1: 5, MWL_AshlandsFort2: 5, MWL_AshlandsFort3: 5
+			},
+			Ports: {
+				MWL_Port1: 5, MWL_Port2: 5, MWL_Port3: 5, MWL_Port4: 5
+			},
+			Traders: {
+				MWL_BlackForestBlacksmith1: 5, MWL_BlackForestBlacksmith2: 5, MWL_MistlandsBlacksmith1: 5, MWL_MountainsBlacksmith1: 5, MWL_OceanTavern1: 5,
+				MWL_PlainsCamp1: 5, MWL_PlainsTavern1: 5
+			},
+			Trainers: {
+				MWL_MeadowsTrainer1: 5, MWL_MistTrainer1: 5, MWL_PlainsTrainer1: 5, MWL_SwampTrainer1: 5
+			},
+			Vanilla: {
+			}
+		};
+
+		const vanillaByCategory = {
+			Swamp: [
+				"Bonemass", "BogWitch_Camp", "SwampWell1", "Grave1", "InfestedTree01", "FireHole", "Runestone_Draugr", "Runestone_Swamps",
+				"SunkenCrypt4", "SwampHut5", "SwampHut1", "SwampHut2", "SwampHut3", "SwampHut4", "SwampRuin1", "SwampRuin2"
+			],
+			Plains: [
+				"GoblinKing", "GoblinCamp2", "Ruin3", "StoneTower1", "StoneTower3", "Runestone_Plains", "StoneHenge1", "StoneHenge2",
+				"StoneHenge3", "StoneHenge4", "StoneHenge5", "StoneHenge6", "TarPit1", "TarPit2", "TarPit3", "StoneHouse1_heath",
+				"StoneHouse2_heath", "StoneHouse5_heath"
+			],
+			Mountains: [
+				"Dragonqueen", "Hildir_cave", "MountainWell1", "Waymarker01", "Waymarker02", "MountainGrave01", "DrakeNest01", "AbandonedLogCabin02",
+				"AbandonedLogCabin03", "AbandonedLogCabin04", "MountainCave02", "StoneTowerRuins04", "StoneTowerRuins05", "DrakeLorestone", "Runestone_Mountains"
+			],
+			Mistlands: [
+				"Mistlands_RockSpire1", "Mistlands_StatueGroup1", "Mistlands_Statue1", "Mistlands_Statue2", "Mistlands_RoadPost1", "Mistlands_GuardTower1_ruined_new2", "Mistlands_GuardTower3_new", "Mistlands_GuardTower3_ruined_new",
+				"Mistlands_GuardTower1_new", "Mistlands_GuardTower2_new", "Mistlands_GuardTower1_ruined_new", "Mistlands_Lighthouse1_new", "Mistlands_DvergrBossEntrance1", "Mistlands_DvergrTownEntrance1", "Mistlands_DvergrTownEntrance2", "Mistlands_Excavation1",
+				"Mistlands_Excavation2", "Mistlands_Excavation3", "Mistlands_Giant2", "Mistlands_Giant1", "Mistlands_Swords1", "Mistlands_Swords2", "Mistlands_Swords3", "Mistlands_Harbour1",
+				"Mistlands_Viaduct1", "Mistlands_Viaduct2", "Runestone_Mistlands"
+			],
+			Meadows: [
+				"Dolmen03", "Dolmen01", "Dolmen02", "StartTemple", "Eikthyrnir", "Hildir_camp", "CombatRuin01", "WoodHouse1",
+				"WoodHouse2", "WoodHouse3", "WoodHouse4", "WoodHouse5", "WoodHouse6", "WoodHouse7", "WoodHouse8", "WoodHouse9",
+				"WoodHouse10", "WoodHouse11", "WoodHouse12", "WoodHouse13", "StoneCircle", "ShipSetting01", "Runestone_Boars", "Runestone_Meadows",
+				"WoodFarm1", "WoodVillage1"
+			],
+			BlackForest: [
+				"Hildir_crypt", "GDKing", "Vendor_BlackForest", "Crypt2", "Ruin1", "Ruin2", "StoneHouse3", "StoneHouse4",
+				"TrollCave02", "Crypt3", "Crypt4", "Greydwarf_camp1", "Runestone_Greydwarfs", "Runestone_BlackForest", "ShipWreck01", "ShipWreck03",
+				"ShipWreck04", "StoneTowerRuins03", "StoneTowerRuins07", "StoneTowerRuins08", "StoneTowerRuins09", "StoneTowerRuins10", "ShipWreck02"
+			],
+			Ashlands: [
+				"CharredStone_Spawner", "CharredTowerRuins2", "CharredTowerRuins3", "FortressRuins", "LeviathanLava", "SulfurArch", "AshlandRuins", "CharredRuins2",
+				"CharredRuins3", "CharredRuins4", "VoltureNest", "FaderLocation", "CharredFortress", "MorgenHole1", "MorgenHole2", "MorgenHole3",
+				"PlaceofMystery1", "PlaceofMystery2", "PlaceofMystery3", "Runestone_Ashlands", "CharredTowerRuins1", "CharredTowerRuins1_dvergr", "CharredRuins1"
+			]
+		};
+
+		Object.entries(vanillaByCategory).forEach(([category, ids]) => {
+			ids.forEach((id, index) => {
+				mwlByCategory[category][id] = index + 1;
+			});
+		});
+
+		const hueRanges = {
+			Meadows: [88, 148],
+			BlackForest: [150, 210],
+			Swamp: [100, 170],
+			Mountains: [200, 255],
+			Plains: [28, 70],
+			Mistlands: [255, 315],
+			Ashlands: [0, 20],
+			Ports: [186, 236],
+			Traders: [42, 92],
+			Trainers: [320, 360]
+		};
+
+		const groupedEntries = Object.entries(mwlByCategory).flatMap(([category, items]) => {
+			const sorted = Object.entries(items)
+				.map(([id, weight]) => ({ id, weight }))
+				.sort((a, b) => a.weight - b.weight || a.id.localeCompare(b.id));
+
+			return sorted.map((entry, localIndex) => ({
+				category,
+				id: entry.id,
+				weight: entry.weight,
+				localIndex,
+				label: entry.id.replace(/^MWL_/, "")
+			}));
+		});
+
+		function hslToRgb(h, s, l) {
+			const sat = s / 100;
+			const light = l / 100;
+			const c = (1 - Math.abs(2 * light - 1)) * sat;
+			const hh = h / 60;
+			const x = c * (1 - Math.abs((hh % 2) - 1));
+			let r1 = 0, g1 = 0, b1 = 0;
+
+			if (hh >= 0 && hh < 1) [r1, g1, b1] = [c, x, 0];
+			else if (hh < 2) [r1, g1, b1] = [x, c, 0];
+			else if (hh < 3) [r1, g1, b1] = [0, c, x];
+			else if (hh < 4) [r1, g1, b1] = [0, x, c];
+			else if (hh < 5) [r1, g1, b1] = [x, 0, c];
+			else [r1, g1, b1] = [c, 0, x];
+
+			const m = light - c / 2;
+			const r = Math.round((r1 + m) * 255);
+			const g = Math.round((g1 + m) * 255);
+			const b = Math.round((b1 + m) * 255);
+			return [r, g, b];
+		}
+
+		function generateColor(category, index) {
+			const [minHue, maxHue] = hueRanges[category] ?? [0, 360];
+			const span = maxHue >= minHue ? (maxHue - minHue) : (360 - minHue + maxHue);
+			const phi = 0.61803398875;
+			const offset = ((index * phi) % 1 + (index % 7) * 0.03) % 1;
+			const hue = (minHue + offset * span + 360) % 360;
+			const saturation = 82 + (index % 4) * 5;
+			const lightness = 40 + ((index * 3) % 5) * 8;
+			return { hue, saturation: Math.min(saturation, 98), lightness: Math.min(lightness, 74) };
+		}
+
+		function toHex(r, g, b) {
+			return "#" + [r, g, b].map((value) => value.toString(16).padStart(2, "0")).join("");
+		}
+
+		function toRgbString(r, g, b) {
+			return `${r},${g},${b}`;
+		}
+
+		function getContrastTextColor(r, g, b) {
+			const [rr, gg, bb] = [r, g, b].map((value) => {
+				const s = value / 255;
+				return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+			});
+			const luminance = 0.2126 * rr + 0.7152 * gg + 0.0722 * bb;
+			return luminance > 0.5 ? "#000000" : "#ffffff";
+		}
+
+		function getNameScale(label) {
+			const baselineChars = 12;
+			const scale = baselineChars / Math.max(label.length, baselineChars);
+			return Math.max(0.45, Math.min(1, scale));
+		}
+
+		const grid = document.getElementById("grid");
+		const spawnMapModeToggle = document.getElementById("spawnMapModeToggle");
+		const categoryFilter = document.getElementById("categoryFilter");
+		const modFilter = document.getElementById("modFilter");
+		const selectAllFilters = document.getElementById("selectAllFilters");
+		const clearAllFilters = document.getElementById("clearAllFilters");
+		const configOutput = document.getElementById("configOutput");
+		const configCode = document.getElementById("configCode");
+		const copyConfigButton = document.getElementById("copyConfigButton");
+		const infoShowing = document.getElementById("infoShowing");
+		const infoMode = document.getElementById("infoMode");
+		let isSpawnMapMode = false;
+
+		const allCategories = Object.keys(mwlByCategory);
+		const allMods = ["Vanilla", "More World Locations"];
+
+		groupedEntries.forEach((entry) => {
+			entry.mod = entry.id.startsWith("MWL_") ? "More World Locations" : "Vanilla";
+		});
+
+		function getEntryRgb(entry) {
+			if (entry.id === "StartTemple") {
+				return [255, 0, 0];
+			}
+
+			const color = generateColor(entry.category, entry.localIndex);
+			return hslToRgb(color.hue, color.saturation, color.lightness);
+		}
+
+		function fillMultiSelect(selectElement, values) {
+			values.forEach((value) => {
+				const option = document.createElement("option");
+				option.value = value;
+				option.textContent = value;
+				option.selected = true;
+				selectElement.appendChild(option);
+			});
+		}
+
+		function getSelectedValues(selectElement) {
+			return Array.from(selectElement.selectedOptions).map((option) => option.value);
+		}
+
+		function getVisibleEntries() {
+			const selectedCategories = new Set(getSelectedValues(categoryFilter));
+			const selectedMods = new Set(getSelectedValues(modFilter));
+			return groupedEntries.filter((entry) =>
+				selectedCategories.has(entry.category) && selectedMods.has(entry.mod)
+			);
+		}
+
+		function buildConfigText(visibleEntries) {
+			if (visibleEntries.length === 0) {
+				return "# No entries selected";
+			}
+
+			const lines = [];
+			visibleEntries.forEach((entry) => {
+				const [r, g, b] = getEntryRgb(entry);
+				lines.push(`${entry.id}: ${toRgbString(r, g, b)}`);
+			});
+
+			return lines.join("\n").trimEnd();
+		}
+
+		function updateInfo(visibleCount) {
+			infoShowing.textContent = `Showing ${visibleCount} / ${groupedEntries.length}`;
+			infoMode.textContent = `Mode: ${isSpawnMapMode ? "Spawn Map" : "Normal"}`;
+		}
+
+		fillMultiSelect(categoryFilter, allCategories);
+		fillMultiSelect(modFilter, allMods);
+
+		spawnMapModeToggle.addEventListener("click", () => {
+			isSpawnMapMode = !isSpawnMapMode;
+			document.body.classList.toggle("spawn-mode", isSpawnMapMode);
+			spawnMapModeToggle.setAttribute("aria-pressed", isSpawnMapMode ? "true" : "false");
+			spawnMapModeToggle.textContent = isSpawnMapMode ? "SPAWN MAP: ON" : "SPAWN MAP: OFF";
+			renderGrid();
+		});
+
+		categoryFilter.addEventListener("change", renderGrid);
+		modFilter.addEventListener("change", renderGrid);
+
+		selectAllFilters.addEventListener("click", () => {
+			Array.from(categoryFilter.options).forEach((option) => {
+				option.selected = true;
+			});
+			Array.from(modFilter.options).forEach((option) => {
+				option.selected = true;
+			});
+			renderGrid();
+		});
+
+		clearAllFilters.addEventListener("click", () => {
+			Array.from(categoryFilter.options).forEach((option) => {
+				option.selected = false;
+			});
+			Array.from(modFilter.options).forEach((option) => {
+				option.selected = false;
+			});
+			renderGrid();
+		});
+
+		copyConfigButton.addEventListener("click", async () => {
+			const configText = configCode.textContent || "";
+			try {
+				await navigator.clipboard.writeText(configText);
+			} catch {
+			}
+			updateInfo(getVisibleEntries().length);
+		});
+
+		function renderGrid() {
+			const selectedCategories = new Set(getSelectedValues(categoryFilter));
+			const selectedMods = new Set(getSelectedValues(modFilter));
+			grid.innerHTML = "";
+			const visibleEntries = getVisibleEntries();
+
+			const renderItem = (entry) => {
+				const color = generateColor(entry.category, entry.localIndex);
+				const [r, g, b] = getEntryRgb(entry);
+				const rgbValue = toRgbString(r, g, b);
+
+				const item = document.createElement("div");
+				item.className = "item";
+
+				const swatch = document.createElement("div");
+				swatch.className = "swatch";
+				swatch.style.backgroundColor = entry.id === "StartTemple"
+					? "rgb(255 0 0)"
+					: `hsl(${color.hue.toFixed(1)} ${color.saturation}% ${color.lightness}%)`;
+				swatch.style.color = getContrastTextColor(r, g, b);
+				swatch.title = `${entry.category} • ${entry.id} • ${entry.weight} • ${entry.mod} • ${rgbValue}`;
+
+				const content = document.createElement("div");
+				content.className = "text-block";
+
+				const nameLine = document.createElement("div");
+				nameLine.className = "name";
+				nameLine.style.fontSize = `calc(var(--base-label-size) * ${getNameScale(entry.label)})`;
+				nameLine.textContent = entry.label;
+
+				const hexLine = document.createElement("div");
+				hexLine.className = "hex";
+				hexLine.textContent = rgbValue;
+
+				const categoryLine = document.createElement("div");
+				categoryLine.className = "category";
+				categoryLine.textContent = entry.category.toUpperCase();
+
+				content.appendChild(nameLine);
+				content.appendChild(hexLine);
+				content.appendChild(categoryLine);
+				swatch.appendChild(content);
+				item.appendChild(swatch);
+				swatch.addEventListener("click", async () => {
+					try {
+						await navigator.clipboard.writeText(rgbValue);
+					} catch {
+					}
+					updateInfo(visibleEntries.length);
+				});
+
+				return item;
+			};
+
+			if (isSpawnMapMode) {
+				allCategories.forEach((categoryName) => {
+					if (!selectedCategories.has(categoryName)) {
+						return;
+					}
+
+					const categoryEntries = visibleEntries.filter((entry) => entry.category === categoryName);
+					if (categoryEntries.length === 0) {
+						return;
+					}
+
+					const categoryGroup = document.createElement("div");
+					categoryGroup.className = "category-group";
+
+					const categoryTitle = document.createElement("div");
+					categoryTitle.className = "category-title";
+					categoryTitle.textContent = categoryName;
+
+					const swatchContainer = document.createElement("div");
+					swatchContainer.className = "category-swatches";
+
+					categoryEntries.forEach((entry) => {
+						swatchContainer.appendChild(renderItem(entry));
+					});
+
+					categoryGroup.appendChild(categoryTitle);
+					categoryGroup.appendChild(swatchContainer);
+					grid.appendChild(categoryGroup);
+				});
+			} else {
+				visibleEntries.forEach((entry) => {
+					grid.appendChild(renderItem(entry));
+				});
+			}
+
+			updateInfo(visibleEntries.length);
+			configCode.textContent = buildConfigText(visibleEntries);
+		}
+
+		renderGrid();
+	</script>
+</body>
+</html>
+ 
