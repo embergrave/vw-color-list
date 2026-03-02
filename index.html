@@ -255,6 +255,7 @@
 			gap: var(--gap);
 			width: min(100%, calc(var(--circle-size) * 7 + var(--gap) * 6));
 			justify-items: center;
+			align-content: start;
 		}
 
 		body.spawn-mode {
@@ -331,7 +332,7 @@
 
 		.swatch {
 			width: var(--circle-size);
-			height: calc(var(--circle-size) * 0.58);
+			height: calc(var(--circle-size) * 0.464);
 			border-radius: 6px;
 			display: flex;
 			align-items: center;
@@ -381,7 +382,7 @@
 		.hex {
 			font-size: calc(var(--base-label-size) * 1.25);
 			font-weight: 700;
-			padding: 1px 0 3px;
+			padding: 0;
 		}
 
 		.category {
