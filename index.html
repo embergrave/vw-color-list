@@ -12,6 +12,7 @@
 			--circle-size: 100px;
 			--base-label-size: calc(var(--circle-size) * 0.11);
 			--panel-height: calc(100vh - 120px);
+			--spawn-label-height: 26px;
 		}
 
 		* {
@@ -261,22 +262,30 @@
 		}
 
 		body.spawn-mode #grid {
-			display: block;
-			column-count: 3;
-			column-gap: 50px;
+			display: flex;
+			flex-direction: column;
+			gap: 36px;
 			width: 100%;
 			padding: 0 12px;
+			align-items: start;
+		}
+
+		body.spawn-mode .spawn-section {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+			gap: 24px;
+			width: 100%;
 		}
 
 		@media (max-width: 900px) {
-			body.spawn-mode #grid {
-				column-count: 2;
+			body.spawn-mode .spawn-section {
+				grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 			}
 		}
 
 		@media (max-width: 620px) {
-			body.spawn-mode #grid {
-				column-count: 1;
+			body.spawn-mode .spawn-section {
+				grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 			}
 		}
 
@@ -288,14 +297,14 @@
 		}
 
 		body.spawn-mode .category-group {
-			break-inside: avoid;
-			display: inline-flex;
+			display: flex;
 			width: 100%;
-			margin: 0 0 15px;
+			margin: 0;
 		}
 
 		body.spawn-mode .category-title {
-			padding: 5px 0;
+			padding: 8px 0 6px;
+			text-align: center;
 		}
 
 		.category-title {
@@ -386,6 +395,31 @@
 
 		body.spawn-mode .category-swatches {
 			gap: 25px;
+		}
+
+		body.spawn-mode .category-labels {
+			display: grid;
+			grid-template-columns: repeat(7, minmax(0, 1fr));
+			gap: 4px;
+			justify-content: center;
+			width: 100%;
+		}
+
+		body.spawn-mode .label-item {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			min-height: var(--spawn-label-height);
+			font-size: 0.7rem;
+			font-weight: 700;
+			line-height: 1.1;
+			padding: 2px 4px;
+			border: 1px solid #222222;
+			background: #0d0d0d;
+			color: #ffffff;
+			word-break: break-word;
+			overflow-wrap: anywhere;
 		}
 	</style>
 </head>
@@ -784,6 +818,12 @@
 			};
 
 			if (isSpawnMapMode) {
+				const topSection = document.createElement("div");
+				topSection.className = "spawn-section";
+
+				const bottomSection = document.createElement("div");
+				bottomSection.className = "spawn-section";
+
 				allCategories.forEach((categoryName) => {
 					if (!selectedCategories.has(categoryName)) {
 						return;
@@ -794,24 +834,38 @@
 						return;
 					}
 
-					const categoryGroup = document.createElement("div");
-					categoryGroup.className = "category-group";
-
-					const categoryTitle = document.createElement("div");
-					categoryTitle.className = "category-title";
-					categoryTitle.textContent = categoryName;
-
 					const swatchContainer = document.createElement("div");
 					swatchContainer.className = "category-swatches";
 
+					const labelContainer = document.createElement("div");
+					labelContainer.className = "category-labels";
+
 					categoryEntries.forEach((entry) => {
 						swatchContainer.appendChild(renderItem(entry));
+						const labelItem = document.createElement("div");
+						labelItem.className = "label-item";
+						labelItem.textContent = entry.label;
+						labelItem.title = entry.id;
+						labelContainer.appendChild(labelItem);
 					});
 
-					categoryGroup.appendChild(categoryTitle);
-					categoryGroup.appendChild(swatchContainer);
-					grid.appendChild(categoryGroup);
+					const topGroup = document.createElement("div");
+					topGroup.className = "category-group";
+					topGroup.appendChild(swatchContainer);
+					topSection.appendChild(topGroup);
+
+					const bottomGroup = document.createElement("div");
+					bottomGroup.className = "category-group";
+					const bottomTitle = document.createElement("div");
+					bottomTitle.className = "category-title";
+					bottomTitle.textContent = categoryName;
+					bottomGroup.appendChild(bottomTitle);
+					bottomGroup.appendChild(labelContainer);
+					bottomSection.appendChild(bottomGroup);
 				});
+
+				grid.appendChild(topSection);
+				grid.appendChild(bottomSection);
 			} else {
 				visibleEntries.forEach((entry) => {
 					grid.appendChild(renderItem(entry));
