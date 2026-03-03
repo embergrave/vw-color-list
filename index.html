@@ -444,6 +444,7 @@
 					<button id="selectAllFilters" type="button">SELECT ALL</button>
 					<button id="clearAllFilters" type="button">CLEAR ALL</button>
 					<button id="spawnMapModeToggle" type="button" aria-pressed="false">SPAWN MAP: OFF</button>
+					<button id="simpleColorsToggle" type="button" aria-pressed="false">SIMPLE COLORS: OFF</button>
 				</div>
 				<div class="control-group info-group">
 					<div class="info-inline">
@@ -651,6 +652,7 @@
 
 		const grid = document.getElementById("grid");
 		const spawnMapModeToggle = document.getElementById("spawnMapModeToggle");
+		const simpleColorsToggle = document.getElementById("simpleColorsToggle");
 		const categoryFilter = document.getElementById("categoryFilter");
 		const modFilter = document.getElementById("modFilter");
 		const selectAllFilters = document.getElementById("selectAllFilters");
@@ -661,6 +663,11 @@
 		const infoShowing = document.getElementById("infoShowing");
 		const infoMode = document.getElementById("infoMode");
 		let isSpawnMapMode = false;
+		let isSimpleColors = false;
+
+		function getGroupBase(label) {
+			return label.replace(/\d+$/, "");
+		}
 
 		const allCategories = Object.keys(mwlByCategory);
 		const allMods = ["Vanilla", "More World Locations"];
@@ -669,12 +676,28 @@
 			entry.mod = entry.id.startsWith("MWL_") ? "More World Locations" : "Vanilla";
 		});
 
+		const simpleColorGroupMap = new Map();
+		groupedEntries.forEach((entry) => {
+			const groupKey = entry.category + "|" + getGroupBase(entry.label);
+			if (!simpleColorGroupMap.has(groupKey)) {
+				simpleColorGroupMap.set(groupKey, entry.localIndex);
+			}
+		});
+
+		function getEffectiveIndex(entry) {
+			if (!isSimpleColors) {
+				return entry.localIndex;
+			}
+			const groupKey = entry.category + "|" + getGroupBase(entry.label);
+			return simpleColorGroupMap.get(groupKey);
+		}
+
 		function getEntryRgb(entry) {
 			if (entry.id === "StartTemple") {
 				return [255, 0, 0];
 			}
 
-			const color = generateColor(entry.category, entry.localIndex);
+			const color = generateColor(entry.category, getEffectiveIndex(entry));
 			return hslToRgb(color.hue, color.saturation, color.lightness);
 		}
 
@@ -705,8 +728,14 @@
 				return "# No entries selected";
 			}
 
+			const sorted = [...visibleEntries].sort((a, b) => {
+				const catOrder = allCategories.indexOf(a.category) - allCategories.indexOf(b.category);
+				if (catOrder !== 0) return catOrder;
+				return a.label.localeCompare(b.label, undefined, { sensitivity: "base" });
+			});
+
 			const lines = [];
-			visibleEntries.forEach((entry) => {
+			sorted.forEach((entry) => {
 				const [r, g, b] = getEntryRgb(entry);
 				lines.push(`${entry.id}: ${toRgbString(r, g, b)}`);
 			});
@@ -727,6 +756,13 @@
 			document.body.classList.toggle("spawn-mode", isSpawnMapMode);
 			spawnMapModeToggle.setAttribute("aria-pressed", isSpawnMapMode ? "true" : "false");
 			spawnMapModeToggle.textContent = isSpawnMapMode ? "SPAWN MAP: ON" : "SPAWN MAP: OFF";
+			renderGrid();
+		});
+
+		simpleColorsToggle.addEventListener("click", () => {
+			isSimpleColors = !isSimpleColors;
+			simpleColorsToggle.setAttribute("aria-pressed", isSimpleColors ? "true" : "false");
+			simpleColorsToggle.textContent = isSimpleColors ? "SIMPLE COLORS: ON" : "SIMPLE COLORS: OFF";
 			renderGrid();
 		});
 
@@ -795,10 +831,23 @@
 			grid.innerHTML = "";
 			const visibleEntries = getVisibleEntries();
 
+			const displayEntries = isSimpleColors
+				? (() => {
+					const seen = new Set();
+					return visibleEntries.filter((entry) => {
+						const groupKey = entry.category + "|" + getGroupBase(entry.label);
+						if (seen.has(groupKey)) return false;
+						seen.add(groupKey);
+						return true;
+					});
+				})()
+				: visibleEntries;
+
 			const renderItem = (entry) => {
-				const color = generateColor(entry.category, entry.localIndex);
+				const color = generateColor(entry.category, getEffectiveIndex(entry));
 				const [r, g, b] = getEntryRgb(entry);
 				const rgbValue = toRgbString(r, g, b);
+				const displayLabel = isSimpleColors ? getGroupBase(entry.label) : entry.label;
 
 				const item = document.createElement("div");
 				item.className = "item";
@@ -816,8 +865,8 @@
 
 				const nameLine = document.createElement("div");
 				nameLine.className = "name";
-				nameLine.textContent = entry.label;
-				nameLine.dataset.label = entry.label;
+				nameLine.textContent = displayLabel;
+				nameLine.dataset.label = displayLabel;
 
 				content.appendChild(nameLine);
 				swatch.appendChild(content);
@@ -845,7 +894,7 @@
 						return;
 					}
 
-					const categoryEntries = visibleEntries.filter((entry) => entry.category === categoryName);
+					const categoryEntries = displayEntries.filter((entry) => entry.category === categoryName);
 					if (categoryEntries.length === 0) {
 						return;
 					}
@@ -860,7 +909,7 @@
 						swatchContainer.appendChild(renderItem(entry));
 						const labelItem = document.createElement("div");
 						labelItem.className = "label-item";
-						labelItem.textContent = entry.label;
+						labelItem.textContent = isSimpleColors ? getGroupBase(entry.label) : entry.label;
 						labelItem.title = entry.id;
 						labelContainer.appendChild(labelItem);
 					});
@@ -883,7 +932,7 @@
 				grid.appendChild(topSection);
 				grid.appendChild(bottomSection);
 			} else {
-				visibleEntries.forEach((entry) => {
+				displayEntries.forEach((entry) => {
 					grid.appendChild(renderItem(entry));
 				});
 			}
